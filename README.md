@@ -16,7 +16,7 @@ Include in this repository are a few different bits and pieces from our project
 
 2) A "Blobber" Python/Qt tool for exploring the 16bit dataset (data not included in this repo)
 
-3) ...
+3) Jupyter/IPython notebook for computing and viewing the three dimensional gradient
 
 ### Installation Instructions
 
