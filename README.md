@@ -3,10 +3,10 @@
 ### Addressing [3D and 2D Bubbles in Rock](https://github.com/amnh/HackTheSolarSystem/wiki/3D-and-2D-Bubbles-In-Rock)
 
 ### Created by Overnight Owls
-[Jesse Spielman](http://github.com/heavyimage)
-[Ian Thompson](http://github.com/quornian)
-[Liz Yang](http://github.com/lizranyang)
-[Mohamed Echkouna](http://github.com/echkouna)
+* [Jesse Spielman](http://github.com/heavyimage)
+* [Ian Thompson](http://github.com/quornian)
+* [Liz Yang](http://github.com/lizranyang)
+* [Mohamed Echkouna](http://github.com/echkouna)
 
 ### Solution Description
 
