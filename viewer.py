@@ -4,7 +4,7 @@ import math
 import numpy
 import collections
 from PIL import Image
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtWidgets, QtGui, QtCore
 
 
 def load_image(path):
@@ -27,19 +27,24 @@ class Viewer(QtWidgets.QWidget):
             load_image("Sem2_Z_16a/Sem2_Z_16a_%04d.tif" % z)
             for z in range(self._min_z, self._max_z + 1)])
             #for z in range(1365)])
+        self._z = (self._min_z + self._max_z) // 2
+        self._start_z = self._z
+        self._reset()
+
+    def _reset(self):
         self._start_pos = None
         self._end_pos = None
         self._radius = 0
-        self._z = (self._min_z + self._max_z) // 2
-        self._start_z = self._z
+        self._threshold_factor = 0.5
 
         self._clip_min = 0.0
         self._clip_max = 1.0
         self._swatch = QtGui.QColor()
 
         self._rot = 0
-        self._update_img()
         self._profile = [0] * 100
+        self._update_img()
+        self.repaint()
 
     def _update_img(self):
         self._rot += 1.0
@@ -57,9 +62,12 @@ class Viewer(QtWidgets.QWidget):
     def paintEvent(self, event):
         painter = QtGui.QPainter()
         painter.begin(self)
-        painter.setPen(QtGui.QColor(255, 0, 0))
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+
         painter.drawImage(0, 0, self._img)
         painter.fillRect(self._img.width() + 10, 10, 100, 100, self._swatch)
+
+        painter.setPen(QtGui.QColor(0, 0, 0))
         x0 = self._img.width() + 10
         y0 = 120
         graph_max = max(self._profile) or 1
@@ -67,15 +75,56 @@ class Viewer(QtWidgets.QWidget):
             v = (100 * self._profile[x]) // graph_max
             #print(x, v)
             painter.drawLine(x0+x, y0 + 100, x0+x, y0 + 100 - v)
+        painter.setPen(QtGui.QColor(255, 0, 0))
+        x = 100 * self._threshold_factor
+        painter.drawLine(x0+x, y0, x0+x, y0 + 100)
         if self._start_pos is not None:
-            painter.drawLine(self._start_pos, self._end_pos)
+            #painter.drawLine(self._start_pos, self._end_pos)
             x = self._start_pos.x()
             y = self._start_pos.y()
             r = self._radius
             dz = abs(self._z - self._start_z)
             r = math.sqrt(r*r - dz*dz) if dz < r else 0
+            painter.setPen(QtGui.QColor(255, 255, 255, 100))
             painter.drawArc(x - r, y - r, 2 * r, 2 * r, 0, 5760)
+            self.fill_blob(painter, x, y, r)
+
         painter.end()
+
+    def fill_blob(self, painter, x0, y0, r0):
+        tf = self._threshold_factor
+        threshold = (1.0 - tf) * self._clip_min + tf * self._clip_max
+        polygon = QtGui.QPolygonF()
+        zdata = self._data[self._z - self._min_z]
+
+        center_v = zdata[y0][x0]
+        segs = 64
+        for seg in range(segs):
+            r = r0
+            motion = r0 / 5
+            dx = math.cos(math.radians(seg * 360 / segs))
+            dy = math.sin(math.radians(seg * 360 / segs))
+            for i in range(10):
+                x = int(x0 + r * dx)
+                y = int(y0 + r * dy)
+                circle_v = zdata[y][x]
+                outer_v = zdata[y+dy*motion][x+dx*motion]
+
+                # Heading for brighter
+                if center_v < threshold:
+                    if circle_v < outer_v:
+                        r += motion / 2
+                    else:
+                        r -= motion / 2
+                else:
+                    if circle_v < outer_v:
+                        r -= motion / 2
+                    else:
+                        r += motion / 2
+                motion /= 2
+            polygon.append(QtCore.QPointF(x, y))
+        painter.setBrush(QtGui.QColor(255, 0, 0, 100))
+        painter.drawPolygon(polygon)
 
     def mousePressEvent(self, event):
         self._start_pos = event.pos()
@@ -100,16 +149,41 @@ class Viewer(QtWidgets.QWidget):
         self._calc_graph()
         self._update_img()
         self.repaint()
+        if self._end_pos == self._start_pos:
+            print("RESET")
+            self._reset()
 
     def wheelEvent(self, event):
-        direction = 1 if event.angleDelta().y() > 0 else -1
-        self._z += direction
-        if self._z < self._min_z:
-            self._z = self._min_z
-        if self._z > self._max_z:
-            self._z = self._max_z
-        self._update_img()
+        direction = 1 if event.angleDelta().y() < 0 else -1
+        if event.buttons():
+            self._threshold_factor += 0.01 * direction
+            if self._threshold_factor > 1.0:
+                self._threshold_factor = 1.0
+            if self._threshold_factor < 0.0:
+                self._threshold_factor = 0.0
+        else:
+            self._z += direction
+            if self._z < self._min_z:
+                self._z = self._min_z
+            if self._z > self._max_z:
+                self._z = self._max_z
+            self._update_img()
         self.repaint()
+
+    def keyPressEvent(self, event):
+        key = event.key()
+        if key == QtCore.Qt.Key_Down:
+            self._start_z += 1
+            self.repaint()
+        elif key == QtCore.Qt.Key_Up:
+            self._start_z -= 1
+            self.repaint()
+        elif key == QtCore.Qt.Key_Left:
+            self._radius -= 1
+            self.repaint()
+        elif key == QtCore.Qt.Key_Right:
+            self._radius += 1
+            self.repaint()
 
     def _calc_graph(self):
         x0 = self._start_pos.x()
@@ -144,6 +218,7 @@ class Viewer(QtWidgets.QWidget):
 def main():
     app = QtWidgets.QApplication([])
     dialog = Viewer()
+    dialog.move(30, 100)
     dialog.resize(800, 700)
     dialog.show()
     app.exec_()
