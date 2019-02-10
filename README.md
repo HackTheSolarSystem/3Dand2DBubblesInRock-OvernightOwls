@@ -14,18 +14,27 @@ Include in this repository are a few different bits and pieces from our project
 
 1) Nuke scripts for creating the harder bubble edges from Dr. Ebel's CT scans
 
-2) ...
+2) A "Blobber" Python/Qt tool for exploring the 16bit dataset (data not included in this repo)
 
 3) ...
 
 ### Installation Instructions
 
-You must list by name all software packages, APIs, frameworks, databases, or any other tools or libraries you used.
+#### Blobber
 
-You must also provide any step-by-step instructions for installation of your solution.
-* Step one - install package manager
-* Step two - special config instructions
-* Step three - system administration notes
-* Step four - command line how-to, listing descriptions of all optional argumentsi
+Requires: Python3, PyQt5, PIL (or Pillow), Numpy
+
+The 16-bit sequence dataset must be downloaded and placed in the relative path:
+
+    Sem2_Z_16a/Sem2_Z_16a_0000.tif
+    Sem2_Z_16a/Sem2_Z_16a_0001.tif
+    ...
+    Sem2_Z_16a/Sem2_Z_16a_0350.tif
+
+A small edit to python/blobber.py will allow different sequences to be used.
+
+ - Change the path
+ - Set the _max_x and _max_y to the resolution
+ - Set the _min_z and _max_z values to match the frame sequence
 
 
